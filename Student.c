@@ -12,8 +12,8 @@ f. List all the students of CSE branch and reside in Kuvempunagar.
 */
 
 #include<stdio.h>
-#include<stdlib.h>
 #include<string.h>
+#include<stdlib.h>
 
 struct Student {
     char SID[13];
@@ -24,21 +24,14 @@ struct Student {
 };
 
 FILE *fp;
-void mainMenu();
-
-void main() {
-    fp = fopen("StudentDetails.txt","w");
-    mainMenu();
-}
 
 void insertStudent() {
     fp = fopen("StudentDetails.txt","a");
     if (fp == NULL)
     {
-        printf("Error....!Exiting....");
-        exit(0);
+        printf("Error....!");
+        return;
     }
-    
     struct Student student;
     printf("\nEnter details of student\n");
     printf("Name: ");     scanf("%s",student.NAME);
@@ -46,30 +39,29 @@ void insertStudent() {
     printf("Branch: ");     scanf("%s",student.BRANCH);
     printf("Semester: ");   scanf("%d",&student.SEMESTER);
     printf("Address: ");    scanf("%s",student.ADDRESS);
-
     fwrite(&student, sizeof(student),1,fp);
     fclose(fp);
 }
 
 void listStudents() {
     struct Student student;
-    int count = 0;
     fp = fopen("StudentDetails.txt","r");
+    if (fp == NULL)
+    {
+        printf("Error....!");
+        return;
+    }
     fseek(fp,0,SEEK_END);
-    printf("Number of records found: %ld\n",ftell(fp)/sizeof(struct Student));
+    printf("Number of records found: %ld\n",(ftell(fp)/sizeof(struct Student)));
     rewind(fp);
-    while(fread(&student,sizeof(struct Student),1,fp)) 
+    while(fread(&student,sizeof(student),1,fp)) 
     {
         printf("Name: %s",student.NAME);
         printf("\tStudent ID: %s",student.SID);
         printf("\tBranch: %s",student.BRANCH);
         printf("\tSemester: %d",student.SEMESTER);
         printf("\tAddress: %s\n",student.ADDRESS);
-        count++;
-    }
-    if (count == 0)
-        printf("No records found.....!\n");
-    
+    }    
     fclose(fp);
 }
 
@@ -78,7 +70,12 @@ void listStudentsCSE()
     struct Student student;
     int found = 0;
     fp = fopen("StudentDetails.txt","r");
-    while(fread(&student,sizeof(struct Student),1,fp)) 
+    if (fp == NULL)
+    {
+        printf("Error....!");
+        return;
+    }
+    while(fread(&student,sizeof(student),1,fp)) 
     {
         if(strcmp(student.BRANCH,"CSE") == 0) 
         {
@@ -100,7 +97,12 @@ void listStudentsCSEKuvempunagar()
     struct Student student;
     int found = 0;
     fp = fopen("StudentDetails.txt","r");
-    while(fread(&student,sizeof(struct Student),1,fp)) 
+    if (fp == NULL)
+    {
+        printf("Error....!");
+        return;
+    }
+    while(fread(&student,sizeof(student),1,fp)) 
     {
         if((strcmp(student.BRANCH,"CSE") == 0) && (strcmp(student.ADDRESS,"KUVEMPUNAGAR") == 0)) 
         {
@@ -119,27 +121,51 @@ void listStudentsCSEKuvempunagar()
 
 void modifyAddress() 
 {
-    struct Student student;
+    struct Student student, modifyStudent;
     int found = 0;
-    char ID[13];
-    char newAddress[25];
-    fp = fopen("StudentDetails.txt","r+");
-    printf("Enter student-ID: ");   scanf("%s",ID);
-    while(fread(&student,sizeof(struct Student),1,fp)) 
+    char ID[13], newAddress[25];
+    fp = fopen("StudentDetails.txt","r");
+    FILE *temp = fopen("temp.txt","a");
+    if (fp == NULL || temp == NULL)
     {
-        if(strcmp(student.SID,ID) == 0) 
-        {
-            printf("Enter new address: ");  scanf("%s",newAddress);
-            fseek(fp,-sizeof(student.ADDRESS),SEEK_CUR);
-            fputs(newAddress,fp);
-            found = 1;
-        }    
+        printf("Error....!");
+        return;
     }
-    if (!found)
-        printf("No records found with student-ID %s\n",ID);
-    else
-        printf("Address updated successfully\n");    
+    printf("Enter student-ID: ");   scanf("%s",ID);
+    while(fread(&student,sizeof(student),1,fp))
+    {
+        if(strcmp(student.SID,ID) == 0)
+        {
+            found = 1;
+            printf("Enter new address: ");  scanf("%s",newAddress);
+            strcpy(modifyStudent.SID,student.SID);
+            strcpy(modifyStudent.NAME,student.NAME);
+            strcpy(modifyStudent.BRANCH,student.BRANCH);
+            modifyStudent.SEMESTER = student.SEMESTER;
+            strcpy(modifyStudent.ADDRESS,newAddress);
+        }
+        else
+        {
+            fwrite(&student, sizeof(student),1,temp);
+        }
+    }
     fclose(fp);
+    fclose(temp);
+    if (!found)
+        printf("No records found with Student-ID: %s\n",ID);
+    else
+    {
+        fp = fopen("StudentDetails.txt","w");
+        temp = fopen("temp.txt","r");
+        printf("Record updated successfully\n");
+        fwrite(&modifyStudent, sizeof(modifyStudent),1,fp);  
+        while(fread(&student,sizeof(student),1,temp))
+        {
+            fwrite(&student, sizeof(student),1,fp);
+        } 
+        fclose(fp);
+    } 
+    remove("temp.txt");
 }
 
 void deleteStudent() 
@@ -149,8 +175,13 @@ void deleteStudent()
     char ID[13];
     fp = fopen("StudentDetails.txt","r");
     FILE *temp = fopen("temp.txt","w");
+    if (fp == NULL || temp == NULL)
+    {
+        printf("Error....!");
+        return;
+    }
     printf("Enter student-ID: ");   scanf("%s",ID);
-    while(fread(&student,sizeof(struct Student),1,fp)) 
+    while(fread(&student,sizeof(student),1,fp)) 
     {
         if(strcmp(student.SID,ID) == 0) 
         {
@@ -161,22 +192,15 @@ void deleteStudent()
             fwrite(&student, sizeof(student),1,temp);
         } 
     }
-    fclose(fp);
-    fclose(temp);
     if (!found)
-        printf("No records found with Student-ID %s\n",ID);
+        printf("No records found with Student-ID: %s\n",ID);
     else
     {
-        fp = fopen("StudentsDetails.txt","w");
-        temp = fopen("temp.txt","r");
-        printf("Record deleted successfully\n");  
-        while(fread(&student,sizeof(struct Student),1,temp))
-        {
-            fwrite(&student, sizeof(student),1,fp);
-        } 
+        printf("Record deleted successfully\n");
+        remove("StudentDetails.txt");
+        rename("temp.txt","StudentDetails.txt");
     }    
-    fclose(fp);
-    fclose(temp);
+    fclose(temp);  
 }
 
 void mainMenu() {
@@ -200,55 +224,8 @@ void mainMenu() {
     }
 }
 
-
-/*
--- Create a table for the structure Student with attributes as SID, NAME, BRANCH, SEMESTER, ADDRESS, PHONE, EMAIL, Insert atleast 10tuples and performthe following operationsusing SQL.
--- a. Insert a new student
--- b. Modify the address of the student based on SID
--- c. Delete a student
--- d. List all the students
--- e. List all the students of CSE branch.
--- f. List all the students of CSE branch and reside in Kuvempunagar.
-
-CREATE DATABASE IF NOT EXISTS Students;
-
-USE Students;
-
-CREATE TABLE IF NOT EXISTS StudentRecords (
-	SID TEXT NOT NULL,
-    NAME TEXT NOT NULL,
-    BRANCH TEXT NOT NULL,
-    SEMESTER INTEGER,
-    ADDRESS TEXT NOT NULL,
-    PHONE LONG,
-    EMAIL TEXT NOT NULL
-);
-
-INSERT INTO StudentRecords VALUES
-("01JST20CS100", "Akshay", "CSE", 5, "MADIKERI", 1234567890, "AkshayMadikeri@gmail.com"),
-("01JST20CS102", "Hemanth", "CSE", 5, "KUVEMPUNAGAR", 2345678910, "HemanthPai@gmail.com"),
-("01JST20CS284", "Sharath", "CSE", 5, "BENGALURU", 3456789120, "SharathShetty@gmail.com"),
-("01JST20CS184", "Sandeep", "CSE", 5, "UDUPI", 4567891230, "SandeepShenoy@gmail.com"),
-("01JST20CS295", "Suraj Rao", "CSE", 5, "MOODABIDRE", "5678912340", "SurajRaoUppor@protonmail.com");
-
-SELECT * FROM StudentRecords;
-
-INSERT INTO StudentRecords VALUES
-("01JST20CS117", "GopalKrishna Hegade", "ECE", 5, "SIRSI", "6789123450", "gopalkrishnaHegade100@gmail.com");
-
-SELECT * FROM StudentRecords;
-
-UPDATE StudentRecords SET ADDRESS = "MUMBAI" WHERE SID = "01JST20CS295";
-
-SELECT * FROM StudentRecords;
-
-DELETE FROM StudentRecords WHERE SID = "01JST20CS184";
-
-SELECT * FROM StudentRecords;
-
-COMMIT;
-
-SELECT * FROM StudentRecords WHERE BRANCH = "CSE";
-
-SELECT * FROM StudentRecords WHERE BRANCH = "CSE" AND ADDRESS LIKE "%KUVEMPUNAGAR%";
-*/
+void main() {
+    fp = fopen("StudentDetails.txt","w");
+    mainMenu();
+    fclose(fp);
+}
